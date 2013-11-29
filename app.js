@@ -5,7 +5,7 @@
     var express = require('express');
     var argv = require('optimist').usage('Usage: $0 --host')
                                   .default('host', 'emu.aliyuncs.com')
-                                  .default('path', './')
+                                  .default('path', './oss/')
                                   .default('debug', false)
                                   .argv;
 
