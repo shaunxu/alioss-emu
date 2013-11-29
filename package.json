@@ -1,0 +1,8 @@
+{
+    "name": "alioss-emu",
+    "version": "0.0.1",
+    "title": "Aliyun OSS Emulator",
+    "description": "An Aliyun OSS cross-platform emulator written in Node.js",
+    "dependencies": {
+    }
+}
