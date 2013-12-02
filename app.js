@@ -1,44 +1,42 @@
 (function () {
     'use strict';
 
-    var http = require('http');
-    var express = require('express');
-    var argv = require('optimist').usage('Usage: $0 --host')
-                                  .default('host', 'emu.aliyuncs.com')
-                                  .default('path', './oss/')
+    var path = require('path');
+    var argv = require('optimist').usage('Usage: $0 --host [oss.aliyuncs.com] --port [80] --path [oss] --mode [default|query] --debug')
+                                  .default('host', 'oss.aliyuncs.com')
+                                  .default('port', '80')
+                                  .default('path', 'oss')
+                                  .default('mode', 'default')
                                   .default('debug', false)
                                   .argv;
+    var logger = require('./logger.js')(argv.debug === true ? 'debug' : 'info');
 
-    var proxy = require('./dnsproxy.js');
+    logger.info('Aliyun OSS Emulator');
+    // establish dns proxt based on the command-line argument `mode`
+    if (argv.mode == 'default') {
+        var proxy = require('./dnsproxy.js');
+        var opt = {};
+        opt.addresses = {};
+        opt.addresses[argv.host] = '127.0.0.1';
+        opt.cache = true;
+        proxy.createServer(opt).start();
 
-    var app = express();
+        // start dns proxy
+        logger.info('DNS proxy had been started. All request to *.emu.aliyuncs.com will be redirected to 127.0.0.1');
+        logger.info('Make sure the system DNS server had been changed to 127.0.0.1');
+    }
 
-    // health check
-    app.get('/ping', function (req, res) {
-        console.log(req.headers.host);
-        console.log(req.query);
+    // start the emulator
+    var root = path.join(process.cwd(), argv.path);
+    var emulator = new (require('./emulator.js'))(
+        logger, 
+        {
+            host: argv.host,
+            port: argv.port,
+            root: root,
+            mode: argv.mode
+        });
+    emulator.start();
 
-        res.send(200, 'pong');
-    });
-
-    console.log('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
-    console.log('+ Aliyun OSS Emulator ');
-    console.log('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
-
-    // start dns proxy
-    var opt = {
-        addresses: {
-            argv.host: '127.0.0.1'
-        },
-        cache: true
-    };
-    proxy.createServer(opt).start();
-    console.log('+ DNS proxy had been started. All request to *.emu.aliyuncs.com will be redirected to 127.0.0.1');
-    console.log('+ Make sure the system DNS server had been changed to 127.0.0.1');
-
-    // start emulator
-    http.createServer(app).listen(80);
-    console.log('+ Aliyun OSS emulator started and listen on 80 port.');
-    console.log('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
 
 })();

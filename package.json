@@ -5,6 +5,9 @@
   "description": "An Aliyun OSS cross-platform emulator written in Node.js",
   "dependencies": {
     "express": "~3.4.5",
-    "optimist": "~0.6.0"
+    "optimist": "~0.6.0",
+    "log4js": "~0.6.9",
+    "underscore": "~1.5.2",
+    "uuid": "~1.4.1"
   }
 }
