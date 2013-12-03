@@ -2,11 +2,13 @@
     'use strict';
 
     var path = require('path');
-    var argv = require('optimist').usage('Usage: $0 --host [oss.aliyuncs.com] --port [80] --path [oss] --mode [default|query] --debug')
-                                  .default('host', 'oss.aliyuncs.com')
+    var argv = require('optimist').default('host', 'oss.aliyuncs.com')
                                   .default('port', '80')
                                   .default('path', 'oss')
                                   .default('mode', 'default')
+                                  .default('auth', false)
+                                  .default('key', '44CF9590006BF252F707')
+                                  .default('secret', 'OtxrzxIsfpFjA7SwPzILwy8Bw21TLhquhboDYROV')
                                   .default('debug', false)
                                   .argv;
     var logger = require('./logger.js')(argv.debug === true ? 'debug' : 'info');
@@ -27,16 +29,22 @@
     }
 
     // start the emulator
+    console.log(argv.auth);
     var root = path.join(process.cwd(), argv.path);
-    var emulator = new (require('./emulator.js'))(
-        logger, 
-        {
-            host: argv.host,
-            port: argv.port,
-            root: root,
-            mode: argv.mode
-        });
-    emulator.start();
+    var options = {
+        host: argv.host,
+        port: argv.port,
+        root: root,
+        mode: argv.mode,
+        auth: {
+            enabled: argv.auth,
+            key: argv.key,
+            secret: argv.secret
+        }
+    };
 
+    logger.info('Emulator started with options: ', options);
+    var emulator = new (require('./emulator.js'))(logger, options);
+    emulator.start();
 
 })();
