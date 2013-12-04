@@ -3,7 +3,9 @@
     
     var http = require('http');
     var express = require('express');
-    var builder = require('xmlbuilder');
+    var data2xml = require('data2xml')({ 'undefined': 'empty', 'null': 'empty' });
+
+    var utils = require('./utils.js');
 
     var Emulator = function (logger, options) {
         var self = this;
@@ -16,31 +18,49 @@
         self._router = new (require('./router.js'))(logger, options.auth);
     };
 
-    Emulator.prototype._response = function (res, statusCode, body, headers) {
+    Emulator.prototype._response = function (res, statusCode, body, requestId, contentType, contentLength) {
         var self = this;
+        var headers = {
+            'x-oss-request-id': requestId,
+            'Date': new Date().toUTCString(),
+            'Content-Length': contentLength || 0,
+            'Connection': 'close',
+            'Server': 'AliyunOSS'
+        };
+        if (contentType) {
+            headers['Content-Type'] = contentType;
+        }
 
         self._logger.debug('RES: Status Code: ' + statusCode + ', \nBody: \n' + (body ? body.toString() : '(unknown)') + '\nHeaders: \n' + self._logger.convertToString(headers));
         res.set(headers);
         res.send(statusCode, body);
     };
 
+    Emulator.prototype._responseXml = function (res, root, xml, requestId) {
+        var self = this;
+
+        xml._attr = {
+            xmlns: 'http://doc.oss.aliyuncs.com'
+        };
+        xml = utils.capsKeys(xml);
+        var body = data2xml(root, xml);
+        self._response(res, 200, body, requestId, 'application/xml', body.length);
+    };
+
     Emulator.prototype._responseError = function (res, error, requestId) {
         var self = this;
-        var xml = builder.create('Error', { xmlns: 'http://doc.oss.aliyuncs.com' });
-        xml.ele('Code', null, error.code);
-        xml.ele('Message', null, error.message);
-        xml.ele('RequestId', null, requestId);
-        xml.ele('HostId', null, self._options.host);
-        var body = xml.end({ pretty: true });
-        var headers = {
-            'x-oss-request-id': requestId,
-            'Date': new Date().toUTCString(),
-            'Content-Length': body.length,
-            'Content-Type': 'text/xml; charset=UTF-8',
-            'Connection': 'close',
-            'Server': 'AliyunOSS'
+
+        var xml = {
+            '_attr': {
+                xmlns: 'http://doc.oss.aliyuncs.com'
+            },
+            'Code': error.code,
+            'Message': error.message,
+            'RequestId': requestId,
+            'HostId': self._options.host
         };
-        self._response(res, error.statusCode, body, headers);
+        var body = data2xml('Error', xml);
+        self._response(res, error.statusCode, body, requestId, 'text/xml; charset=UTF-8', body.length);
     };
 
     Emulator.prototype.start = function () {

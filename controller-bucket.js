@@ -53,6 +53,14 @@
         });
     };
 
+    BucketController.prototype.list = function (req, rv, callback) {
+        var self = this;
+
+        var headers = self.defaultHeaders(rv);
+        // find all folders under the root path
+        
+    };
+
     module.exports = BucketController;
 
 })();

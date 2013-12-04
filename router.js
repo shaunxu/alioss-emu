@@ -13,23 +13,46 @@
         self._controllers = {};
     };
 
-    // @param callback { function } - fn (error, controller, action)
-    Router.prototype._route = function (controllerName, actionName, callback) {
+    // @param rv {object} - route value
+    // @param anonymous {bool} - if this operation can be invoked anonymous
+    Router.prototype._authenticate = function (rv, anonymous, callback) {
         var self = this;
-        // retrieve the controller instance with cache enabled
-        var controller = self._controllers[controllerName];
-        if (!controller) {
-            controller = new (require('./controller-' + controllerName + '.js'))(self._logger);
-            controller[controllerName] = controller;
-        }
-        // invoke the action from the controller instance to perform the operation
-        var action  = controller[actionName];
-        if (action) {
-            callback(null, controller, action);
+
+        if (anonymous) {
+            callback(null);
         }
         else {
-            callback(errors.MethodNotAllowed, null, null);
+            utils.authenticate(self._options, rv.authorization, rv.method, rv.headers, function (error) {
+                callback(error);
+            });
         }
+    };
+
+    // @param callback { function } - fn (error, controller, action)
+    Router.prototype._route = function (controllerName, actionName, rv, anonymous, callback) {
+        var self = this;
+        // authenticate if NOT anonymous
+        self._authenticate(rv, anonymous, function (error) {
+            if (error) {
+                callback(error, null, null);
+            }
+            else {
+                // retrieve the controller instance with cache enabled
+                var controller = self._controllers[controllerName];
+                if (!controller) {
+                    controller = new (require('./controller-' + controllerName + '.js'))(self._logger);
+                    controller[controllerName] = controller;
+                }
+                // invoke the action from the controller instance to perform the operation
+                var action  = controller[actionName];
+                if (action) {
+                    callback(null, controller, action);
+                }
+                else {
+                    callback(errors.MethodNotAllowed, null, null);
+                }
+            }
+        });
     };
 
     // @param rv {object} - route values which is the same object from parser.parse()
@@ -38,12 +61,14 @@
         var self = this;
         var routed = false;
 
-        // // Get Service (List Bucket)
-        // if (routed === false && utils.isNullOrEmpty(rv.bucketName) && 
-        //     rv.method == 'GET') {
-        //     self._logger.debug('Routed to operation: bucket.list');
-        //     routed = true;
-        // }
+        // Get Service (List Bucket)
+        if (routed === false && 
+            utils.isNullOrEmpty(rv.bucketName) && 
+            rv.method == 'GET') {
+            self._logger.debug('Routed to operation: bucket.list');
+            routed = true;
+            self._route('bucket', 'list', rv, false, callback);
+        }
 
         // Put Bucket
         if (routed === false && 
@@ -52,15 +77,7 @@
             rv.method == 'PUT') {
             self._logger.debug('Routed to operation: bucket.put');
             routed = true;
-            utils.authenticate(self._options, rv.authorization, rv.method, rv.headers, function (error) {
-                if (error) {
-                    callback(error, null);
-                }
-                else {
-                    self._route('bucket', 'put', callback);
-                }
-            });
-
+            self._route('bucket', 'put', rv, false, callback);
         }
 
         // finally

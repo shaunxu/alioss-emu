@@ -21,6 +21,42 @@
         }
     };
 
+    var capsKeys = function (object) {
+        var _capsKeys = function (_parent, _key, _value) {
+            if (_key.toUpperCase() == 'ID') {
+                _key = 'ID';
+            }
+            else {
+                _key = _key.charAt(0).toUpperCase() + _key.substr(1);
+            }
+            if (_.isArray(_value)) {
+                _parent[_key] = [];
+                _value.forEach(function (__value) {
+                    var __parent = {};
+                    _parent[_key].push(__parent);
+                    for (var ___key in __value) {
+                        _capsKeys(__parent, ___key, __value[___key]);
+                    }
+                });
+            }
+            else if (_.isObject(_value)) {
+                _parent[_key] = {};
+                for (var __key in _value) {
+                    _capsKeys(_parent[_key], __key, _value[__key]);
+                }
+            }
+            else {
+                _parent[_key] = _value;
+            }
+        };
+
+        var result = {};
+        for (var key in object) {
+            _capsKeys(result, key, object[key]);
+        }
+        return result;
+    };
+
     var getCanonicalizedOssHeaders = function (headers) {
         var tmp_headers = {};
         var canonicalized_oss_headers = '';
