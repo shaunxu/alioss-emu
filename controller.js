@@ -38,18 +38,40 @@
     // @param path {string} - the bucket or object path, NOT the meta path
     // @param meta {object} - metadata
     // @param callback {function} - fn (error)
-    Controller.prototype.saveMeta = function (path, meta, callback) {
+    Controller.prototype.setMeta = function (path, meta, callback) {
         var metaPath = path + '.meta';
-        var data = JSON.stringify(meta, null, 2);
-        fs.writeFile(metaPath, data, function (error) {
-            if (error) {
-                self._logger.error('Controller.prototype.saveMeta(), create meta failed. ', 'metaPath: ', metaPath, ', Error: ', error);
-                callback(errors.InternalError);
-            }
-            else {
-                callback(null);
-            }
-        })
+        if (meta) {
+            // create or update meta file
+            var data = JSON.stringify(meta, null, 2);
+            fs.writeFile(metaPath, data, function (error) {
+                if (error) {
+                    self._logger.error('Controller.prototype.saveMeta(), create meta failed. ', 'metaPath: ', metaPath, ', Error: ', error);
+                    callback(errors.InternalError);
+                }
+                else {
+                    callback(null);
+                }
+            })
+        }
+        else {
+            // delete meta file
+            fs.exists(metaPath, function (exists) {
+                if (exists) {
+                    fs.unlink(metaPath, function (error) {
+                        if (error) {
+                            self._logger.error('Controller.prototype.setMeta(), delete meta failed. ', 'metaPath: ', metaPath, ', Error: ', error);
+                            callback(errors.InternalError);
+                        }
+                        else {
+                            callback(null);
+                        }
+                    });
+                }
+                else {
+                    callback(null);
+                }
+            });
+        }
     };
 
     module.exports = Controller;

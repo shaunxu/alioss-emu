@@ -45,7 +45,7 @@
         res.send(statusCode, body);
     };
 
-    Emulator.prototype._responseXml = function (res, root, xml, headers, requestId) {
+    Emulator.prototype._responseXml = function (res, root, xml, headers, requestId, statusCode) {
         var self = this;
 
         xml._attr = {
@@ -53,7 +53,7 @@
         };
         xml = utils.capsKeys(xml);
         var body = data2xml(root, xml);
-        self._response(res, 200, body, requestId, headers, 'application/xml');
+        self._response(res, statusCode || 200, body, requestId, headers, 'application/xml');
     };
 
     Emulator.prototype._responseError = function (res, error, requestId) {
@@ -96,18 +96,18 @@
                             // pass the app level options into route value
                             rv.global = self._options;
                             // perform the action from controller with arguments (req, rv, callback)
-                            action.call(controller, req, rv, function (error, body, root, headers) {
+                            action.call(controller, req, rv, function (error, body, root, headers, statusCode) {
                                 if (error) {
                                     self._responseError(res, error, rv.requestId);
                                 }
                                 else {
                                     if (root) {
                                         // root was specified which means this is an xml response
-                                        self._responseXml(res, root, body, headers, rv.requestId);
+                                        self._responseXml(res, root, body, headers, rv.requestId, statusCode);
                                     }
                                     else {
                                         // no root specified so the body should be null or stream
-                                        self._response(res, 200, body, rv.requestId, headers);
+                                        self._response(res, statusCode || 200, body, rv.requestId, headers);
                                     }
                                 }
                             });
