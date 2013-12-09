@@ -5,7 +5,7 @@
 
     // IMPORTANT 
     // each function under this class must has arguments (req, rv, callback)
-    // which callback is (error, body, headers)
+    // which callback is (error, body, mode { 'xml', 'data' }, headers)
 
     var Controller = function (name, logger) {
         var self = this;

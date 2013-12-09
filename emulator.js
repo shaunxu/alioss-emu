@@ -18,25 +18,34 @@
         self._router = new (require('./router.js'))(logger, options.auth);
     };
 
-    Emulator.prototype._response = function (res, statusCode, body, requestId, contentType, contentLength) {
+    Emulator.prototype._response = function (res, statusCode, body, requestId, headers, contentType, contentLength) {
         var self = this;
-        var headers = {
-            'x-oss-request-id': requestId,
-            'Date': new Date().toUTCString(),
-            'Content-Length': contentLength || 0,
-            'Connection': 'close',
+
+        var h = headers || {
             'Server': 'AliyunOSS'
         };
-        if (contentType) {
-            headers['Content-Type'] = contentType;
+        if (!h['x-oss-request-id']) {
+            h['x-oss-request-id'] = requestId;
+        }
+        if (!h['Date']) {
+            h['Date'] = new Date().toUTCString();
+        }
+        if (!h['Content-Length']) {
+            h['Content-Length'] = contentLength ? contentLength : (body ? (body.length ? body.length : 0) : 0);
+        }
+        if (!h['Content-Type'] && contentType) {
+            h['Content-Type'] = contentType;
+        }
+        if (!h['Connection']) {
+            h['Connection'] = 'close';
         }
 
-        self._logger.debug('RES: Status Code: ' + statusCode + ', \nBody: \n' + (body ? body.toString() : '(unknown)') + '\nHeaders: \n' + self._logger.convertToString(headers));
-        res.set(headers);
+        self._logger.debug('RES: Status Code: ' + statusCode + ', \nBody: \n' + (body ? body.toString() : '(unknown)') + '\nHeaders: \n' + self._logger.convertToString(h));
+        res.set(h);
         res.send(statusCode, body);
     };
 
-    Emulator.prototype._responseXml = function (res, root, xml, requestId) {
+    Emulator.prototype._responseXml = function (res, root, xml, headers, requestId) {
         var self = this;
 
         xml._attr = {
@@ -44,7 +53,7 @@
         };
         xml = utils.capsKeys(xml);
         var body = data2xml(root, xml);
-        self._response(res, 200, body, requestId, 'application/xml', body.length);
+        self._response(res, 200, body, requestId, headers, 'application/xml');
     };
 
     Emulator.prototype._responseError = function (res, error, requestId) {
@@ -60,7 +69,7 @@
             'HostId': self._options.host
         };
         var body = data2xml('Error', xml);
-        self._response(res, error.statusCode, body, requestId, 'text/xml; charset=UTF-8', body.length);
+        self._response(res, error.statusCode, body, requestId, null, 'text/xml; charset=UTF-8');
     };
 
     Emulator.prototype.start = function () {
@@ -84,13 +93,22 @@
                             self._responseError(res, error, rv.requestId);
                         }
                         else {
+                            // pass the app level options into route value
+                            rv.global = self._options;
                             // perform the action from controller with arguments (req, rv, callback)
-                            action.call(controller, req, rv, function (error, body, headers) {
+                            action.call(controller, req, rv, function (error, body, root, headers) {
                                 if (error) {
                                     self._responseError(res, error, rv.requestId);
                                 }
                                 else {
-                                    self._response(res, 200, body, headers);
+                                    if (root) {
+                                        // root was specified which means this is an xml response
+                                        self._responseXml(res, root, body, headers, rv.requestId);
+                                    }
+                                    else {
+                                        // no root specified so the body should be null or stream
+                                        self._response(res, 200, body, rv.requestId, headers);
+                                    }
                                 }
                             });
                         }

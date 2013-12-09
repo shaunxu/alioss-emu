@@ -9,6 +9,8 @@
                                   .default('auth', false)
                                   .default('key', '44CF9590006BF252F707')
                                   .default('secret', 'OtxrzxIsfpFjA7SwPzILwy8Bw21TLhquhboDYROV')
+                                  .default('owner-id', '00220120222')
+                                  .default('owner-displayname', 'oss_emu')
                                   .default('debug', false)
                                   .argv;
     var logger = require('./logger.js')(argv.debug === true ? 'debug' : 'info');
@@ -40,6 +42,10 @@
             enabled: argv.auth,
             key: argv.key,
             secret: argv.secret
+        },
+        owner: {
+            id: argv['owner-id'],
+            name: argv['owner-displayname']
         }
     };
 

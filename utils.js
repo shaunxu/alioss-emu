@@ -3,6 +3,7 @@
 
     var crypto = require('crypto');
     var utf8 = require('utf8');
+    var _ = require('underscore');
 
     var errors = require('./errors.js');
 
@@ -118,6 +119,7 @@
         }
     };
 
+    module.exports.capsKeys = capsKeys;
     module.exports.isNullOrEmpty = isNullOrEmpty;
     module.exports.authenticate = authenticate;
 
