@@ -90,6 +90,16 @@
             self._route('bucket', 'delete', rv, false, callback);
         }
 
+        // put object
+        if (routed == false &&
+            !utils.isNullOrEmpty(rv.bucketName) &&
+            !utils.isNullOrEmpty(rv.objectName) &&
+            rv.method == 'PUT') {
+            self._logger.debug('Routed to operation: object.put');
+            routed = true;
+            self._route('object', 'put', rv, false, callback);
+        }
+
         // finally
         if (routed === false) {
             callback(errors.NotImplemented, null, null);

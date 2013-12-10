@@ -7,6 +7,36 @@
 
     var errors = require('./errors.js');
 
+    var hasOwnPropertyIgnoreCase = function (object, key) {
+        for (var k in object) {
+            var expect = key.toLowerCase();
+            var actual = k.toLowerCase();
+            if (expect === actual) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    var getOwnPropertyIgnoreCase = function (object, key) {
+        var result = object[key];
+        if (!result) {
+            for (var k in object) {
+                var expect = key.toLowerCase();
+                var actual = k.toLowerCase();
+                if (expect === actual) {
+                    result = object[k];
+                    break;
+                }
+            }
+        }
+        return result;
+    };
+
+    var startsWith = function (str, value) {
+        return str.slice(0, value.length) == value;
+    };
+
     var isNullOrEmpty = function (value) {
         if (value === null) {
             return true;
@@ -119,6 +149,9 @@
         }
     };
 
+    module.exports.hasOwnPropertyIgnoreCase = hasOwnPropertyIgnoreCase;
+    module.exports.getOwnPropertyIgnoreCase = getOwnPropertyIgnoreCase;
+    module.exports.startsWith = startsWith;
     module.exports.capsKeys = capsKeys;
     module.exports.isNullOrEmpty = isNullOrEmpty;
     module.exports.authenticate = authenticate;

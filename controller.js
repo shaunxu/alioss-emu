@@ -74,6 +74,28 @@
         }
     };
 
+    Controller.prototype.exists = function (path, shouldBeDirectory, callback) {
+        var self = this;
+
+        fs.exists(path, function (exists) {
+            if (exists) {
+                fs.stat(path, function (error, stats) {
+                    if (error) {
+                        self._logger.error('Controller.prototype.exists(), path: ', path, ', Error: ', error);
+                        callback(error, null);
+                    }
+                    else {
+                        var result = shouldBeDirectory ? stats.isDirectory() : stats.isFile();
+                        callback(null, result);
+                    }
+                });
+            }
+            else {
+                callback(null, false);
+            }
+        });
+    };
+
     module.exports = Controller;
 
 })();
