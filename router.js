@@ -100,6 +100,16 @@
             self._route('object', 'put', rv, false, callback);
         }
 
+        // get object
+        if (routed == false &&
+            !utils.isNullOrEmpty(rv.bucketName) &&
+            !utils.isNullOrEmpty(rv.objectName) &&
+            rv.method == 'GET') {
+            self._logger.debug('Routed to operation: object.get');
+            routed = true;
+            self._route('object', 'get', rv, false, callback);
+        }
+
         // finally
         if (routed === false) {
             callback(errors.NotImplemented, null, null);

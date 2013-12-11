@@ -82,7 +82,6 @@
                             callback(errors.InternalError, null, null, null, null);
                         };
                         var _onEnd = function () {
-                            console.log('md5');
                             // calculate etag (md5)
                             self._calculateETag(objectPath, function (error, etag) {
                                 if (error) {
@@ -113,6 +112,156 @@
                 }
             })
         }
+    };
+
+    ObjectController.prototype._getValueFromHeaderOrQuery = function (rv, key, ignoreCase) {
+        var self = this;
+
+        var value = null;
+        // try get the value from headers
+        if (ignoreCase) {
+            value = utils.getOwnPropertyIgnoreCase(rv.headers, key);
+        }
+        else {
+            value = rv.headers[key];
+        }
+        // try get the value from query if it's not defined in headers
+        if (!value) {
+            if (ignoreCase) {
+                value = utils.getOwnPropertyIgnoreCase(rv.params, key);
+            }
+            else {
+                value = rv.params[key];
+            }
+        }
+        return value;
+    };
+
+    ObjectController.prototype._getRange = function (rv) {
+        var self = this;
+
+        var range = null;
+        var value = self._getValueFromHeaderOrQuery(rv, 'Range');
+        if (value) {
+            var kvp = value.split('=');
+            if (kvp.length > 1 && kvp[0] == 'bytes=') {
+                var rs = kvp[1].split('-');
+                if (rs.length > 1) {
+                    range = {
+                        s: rs[0],
+                        e: rs[1]
+                    };
+                }
+            }
+        }
+        return range;
+    };
+
+    ObjectController.prototype._mergeProperty = function (source, target, key, overwrite) {
+        var self = this;
+
+        overwrite = overwrite || false;
+        var srouceValue = utils.getOwnPropertyIgnoreCase(source, key);
+        var targetValue = utils.getOwnPropertyIgnoreCase(target, key);
+        if (srouceValue) {
+            if (overwrite || !targetValue) {
+                target[key] = srouceValue;
+            }
+        }
+    };
+
+    ObjectController.prototype._calculateResponseHeaders = function (objectPath, rv, callback) {
+        var self = this;
+
+        var headers = {};
+        // retrieve the file size and last modified, then save into headers
+        fs.stat(objectPath, function (error, stats) {
+            if (error) {
+                self._logger.error('ObjectController.prototype._calculateResponseHeaders(), fs.stat() failed, objectPath: ', objectPath, ', Error: ', error);
+                callback(error, null);
+            }
+            else {
+                headers['Content-Length'] = stats.size;
+                headers['Last-Modified'] = stats.mtime.toUTCString();
+                // calculate etag from the file and save into headers
+                self._calculateETag(objectPath, function (error, etag) {
+                    if (error) {
+                        callback(errors.InternalError, null, null, null, null);
+                    }
+                    else {
+                        headers['ETag'] = etag;
+                        // retrieve headers from meta and push into the headers for those not populated
+                        self.getMeta(objectPath, function (error, meta) {
+                            if (error) {
+                                callback(errors.InternalError, null, null, null, null);
+                            }
+                            else {
+                                self._mergeProperty(meta, headers, 'Cache-Control', true);
+                                self._mergeProperty(meta, headers, 'Content-Disposition', true);
+                                self._mergeProperty(meta, headers, 'Content-Encoding', true);
+                                self._mergeProperty(meta, headers, 'Content-Type', true);
+                                self._mergeProperty(meta, headers, 'Expires', true);
+                                // retrieve the expected response headers from request (those starts with `response-` headers)
+                                var expectedHeaders = {
+                                    'Cache-Control': self._getValueFromHeaderOrQuery(rv, 'response-cache-control', true),
+                                    'Content-Disposition': self._getValueFromHeaderOrQuery(rv, 'response-content-disposition', true),
+                                    'Content-Encoding': self._getValueFromHeaderOrQuery(rv, 'response-content-encoding', true),
+                                    'Content-Type': self._getValueFromHeaderOrQuery(rv, 'response-content-type', true),
+                                    'Content-Language': self._getValueFromHeaderOrQuery(rv, 'response-content-language', true),
+                                    'Expires': self._getValueFromHeaderOrQuery(rv, 'response-expires', true)
+                                };
+                                self._mergeProperty(expectedHeaders, headers, 'Cache-Control', true);
+                                self._mergeProperty(expectedHeaders, headers, 'Content-Disposition', true);
+                                self._mergeProperty(expectedHeaders, headers, 'Content-Encoding', true);
+                                self._mergeProperty(expectedHeaders, headers, 'Content-Type', true);
+                                self._mergeProperty(expectedHeaders, headers, 'Content-Language', true);
+                                self._mergeProperty(expectedHeaders, headers, 'Expires', true);
+                                callback(null, headers);
+                            }
+                        });
+                    }
+                });
+
+            }
+        });
+    };
+
+    ObjectController.prototype.get = function (req, rv, callback) {
+        var self = this;
+
+        var objectPath = self._getObjectPath(rv);
+        var bucketPath = path.dirname(objectPath);
+
+        // check if the object exists
+        self.exists(objectPath, false, function (error, exists) {
+            if (error) {
+                callback(errors.InternalError, null, null, null, null);
+            }
+            else {
+                if (exists) {
+                    self._calculateResponseHeaders(objectPath, rv, function (error, headers) {
+                        if (error) {
+                            callback(errors.InternalError, null, null, null, null);
+                        }
+                        else {
+                            // open the object file and pipe its content into body
+                            fs.readFile(objectPath, function (error, data) {
+                                if (error) {
+                                    self._logger.error('ObjectController.prototype.get(), fs.readFile() failed, objectPath: ', objectPath, ', Error: ', error);
+                                    callback(errors.InternalError, null, null, null, null);
+                                }
+                                else {
+                                    callback(null, data, null, headers, null);
+                                }
+                            });
+                        }
+                    });
+                }
+                else {
+                    callback(errors.NoSuchKey, null, null, null, null);
+                }
+            }
+        });
     };
 
     module.exports = ObjectController;

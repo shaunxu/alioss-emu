@@ -4,6 +4,7 @@
     var http = require('http');
     var express = require('express');
     var data2xml = require('data2xml')({ 'undefined': 'empty', 'null': 'empty' });
+    var _ = require('underscore');
 
     var utils = require('./utils.js');
 
