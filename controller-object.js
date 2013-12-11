@@ -88,7 +88,6 @@
                                     callback(errors.InternalError, null, null, null, null);
                                 }
                                 else {
-                                    meta['ETag'] = etag;
                                     // save associate meta file
                                     self.setMeta(objectPath, meta, function (error) {
                                         if (error) {
