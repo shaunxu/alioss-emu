@@ -18,6 +18,9 @@
         else if (_.isFunction(value)) {
             result = '(function)';
         }
+        else if (value instanceof Buffer) {
+            result = '<Buffer: ' + value.length + '>';
+        }
         else if (_.isObject(value)) {
             result = util.inspect(value, { depth: 9 });
         }

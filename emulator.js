@@ -41,7 +41,7 @@
             h['Connection'] = 'close';
         }
 
-        self._logger.debug('RES: Status Code: ' + statusCode + ', \nBody: \n' + (body ? body.toString() : '(unknown)') + '\nHeaders: \n' + self._logger.convertToString(h));
+        self._logger.debug('RES: Status Code: ' + statusCode + ', Body: ', body,  'Headers: ', h);
         res.set(h);
         res.send(statusCode, body);
     };
